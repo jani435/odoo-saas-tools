@@ -10,7 +10,7 @@ import time
 from datetime import datetime, timedelta
 from openerp.tools import DEFAULT_SERVER_DATETIME_FORMAT
 import urllib2
-import simplejson
+import json as simplejson
 import werkzeug
 import requests
 import random
