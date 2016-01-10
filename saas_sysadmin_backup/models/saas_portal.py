@@ -1,5 +1,5 @@
 import urllib2
-import simplejson
+import json as simplejson
 import werkzeug
 import requests
 
