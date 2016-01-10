@@ -1,0 +1,390 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+        <menuitem name="SaaS" id="menu_base_saas" sequence="30" />
+        <menuitem id="menu_saas" parent="menu_base_saas" name="SaaS" sequence="1" />
+
+        <!-- Database -->
+
+       <record id="view_databases_form" model="ir.ui.view">
+            <field name="name">saas_portal.databases.form</field>
+            <field name="model">saas_portal.database</field>
+            <field name="arch" type="xml">
+                <form string="plans">
+                    <sheet>
+                        <group>
+                           <field name="name" />
+                           <field name="state" />
+                           <field name="client_id" readonly="1" />
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <!-- Client -->
+
+        <record id="view_clients_tree" model="ir.ui.view">
+            <field name="name">saas_portal.client.tree</field>
+            <field name="model">saas_portal.client</field>
+            <field name="priority">4</field>
+            <field name="arch" type="xml">
+                <tree string="Clients">
+                    <field name="name"/>
+                    <field name="state"/>
+                    <field name="last_connection"/>
+                    <field name="users_len"/>
+                    <field name="file_storage"/>
+                    <field name="db_storage"/>
+                    <field name="expiration_datetime"/>
+                    <button name="edit_database" type="object" icon="gtk-connect" attrs="{'invisible':[('state', 'in', ['deleted', 'draft'])]}"/>
+                    <button name="upgrade_database" attrs="{'invisible':[('state', 'in', ['deleted'])]}" type="object" icon="gtk-execute" />
+                    <button name="delete_database_server" type="object" attrs="{'invisible':[('state', 'not in', ['pending'])]}" icon="gtk-delete"
+                    confirm="Are you sure to delete this database?"/>
+                </tree>
+            </field>
+        </record>
+
+
+        <record id="view_clients_form" model="ir.ui.view">
+            <field name="name">saas_portal.client.form</field>
+            <field name="model">saas_portal.client</field>
+            <field name="arch" type="xml">
+                <form string="Clients">
+                    <field name="expired" invisible="1"/>
+                    <header>
+                        <button string="Log in" name="edit_database" type="object" attrs="{'invisible':[('state', 'in', ['deleted','draft'])]}" icon="gtk-connect" class="oe_highlight"/>
+                        <button string="Configure" name="upgrade_database" type="object" attrs="{'invisible':[('state', 'in', ['deleted','draft'])]}" icon="gtk-execute" />
+                        <button string="Delete" name="delete_database_server" type="object" attrs="{'invisible':['|',('state', 'not in', ['pending'])]}" icon="gtk-delete" 
+                        confirm="Are you sure to delete this database?"/>
+                        <button string="Sync server" type="object" name="action_sync_server" icon="gtk-refresh"/>
+                        <field name="state" widget="statusbar" statusbar_visible="open,pending,deleted" clickable="False"/>
+                    </header>
+                    <sheet>
+                    <group>
+                        <group>
+                            <field name="client_id"/>
+                            <field name="name"/>
+                            <field name="plan_id"/>
+                            <field name="partner_id"/>
+                            <field name="users_len"/>
+                            <field name="file_storage"/>
+                            <field name="db_storage"/>
+                            <field name="server_id"/>
+                            <field name="expiration_datetime"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <!--
+                        <page string="OAuth Users">
+                            <field name="token_ids" readonly="1">
+                                <tree>
+                                    <field name="user_id"/>
+                                    <field name="expires"/>
+                                </tree>
+                            </field>
+                        </page>
+                        -->
+                    </notebook>
+                    </sheet>
+                    <div class="oe_chatter">
+                        <field name="message_follower_ids" widget="mail_followers" groups="base.group_user"/>
+                        <field name="message_ids" widget="mail_thread"/>
+                    </div>
+                </form>
+            </field>
+        </record>
+
+        <record id="view_saas_portal_client_filter" model="ir.ui.view">
+            <field name="name">saas_portal.client.select</field>
+            <field name="model">saas_portal.client</field>
+            <field name="arch" type="xml">
+                <search string="Search Client">
+                    <field name="name" string="Database Name"/>
+                    <filter string="In Progress" name="current" domain="[('state', '=','open')]"/>
+                    <separator/>
+                    <field name="partner_id" string="Contact" filter_domain="[('partner_id', 'child_of', self)]"/>
+                </search>
+            </field>
+        </record>
+
+        <record id="action_clients" model="ir.actions.act_window">
+            <field name="name">Clients</field>
+            <field name="type">ir.actions.act_window</field>
+            <field name="res_model">saas_portal.client</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">tree,form</field>
+            <field name="search_view_id" ref="view_saas_portal_client_filter"/>
+            <field name="context">{'search_default_current': 1}</field>
+        </record>
+
+        <menuitem action="action_clients" id="menu_clients" parent="menu_saas" sequence="10"/>
+
+        <!-- Server -->
+
+        <record id="view_server_tree" model="ir.ui.view">
+            <field name="name">saas_portal.server.tree</field>
+            <field name="model">saas_portal.server</field>
+            <field name="priority">4</field>
+            <field name="arch" type="xml">
+                <tree string="Server">
+                    <field name="sequence" widget="handle"/>
+                    <field name="name"/>
+                    <field name="active"/>
+                </tree>
+            </field>
+        </record>
+
+
+        <record id="view_server_form" model="ir.ui.view">
+            <field name="name">saas_portal.server.form</field>
+            <field name="model">saas_portal.server</field>
+            <field name="arch" type="xml">
+                <form string="Server">
+                    <header>
+                        <!-- TODO
+                             action_create_server will ask for master password only.
+                             * https://erppeek.readthedocs.org/en/latest/api.html#erppeek.Client.create_database
+                        <button string="Create Server" name="%(action_create_server
+)d" type="action" class="oe_highlight" states="draft"/>
+                        -->
+                        <button string="Open Server" name="action_redirect_to_server" type="object" icon="gtk-connect" class="oe_highlight"/>
+                        <button name="action_sync_server" type="object" string="Sync server" icon="gtk-refresh"/>
+                    </header>
+                    <sheet>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="client_id"/>
+                            <field name="active"/>
+                            <field name="request_scheme"/>
+			    <field name="verify_ssl" attrs="{'invisible': [('request_scheme', '!=', 'https')]}"/>
+                            <field name="request_port"/>
+                        </group>
+                    </group>
+                    <field name="client_ids" readonly="1">
+                        <tree>
+                            <field name="name"/>
+                            <field name="state"/>
+                            <field name="users_len"/>
+                            <field name="file_storage"/>
+                            <field name="db_storage"/>
+                        </tree>
+                    </field>
+                    </sheet>
+                    <div class="oe_chatter">
+                        <field name="message_follower_ids" widget="mail_followers" groups="base.group_user"/>
+                        <field name="message_ids" widget="mail_thread"/>
+                    </div>
+                </form>
+            </field>
+        </record>
+
+        <record id="action_server" model="ir.actions.act_window">
+            <field name="name">Servers</field>
+            <field name="type">ir.actions.act_window</field>
+            <field name="res_model">saas_portal.server</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">tree,form</field>
+        </record>
+
+        <menuitem action="saas_portal.action_server" id="menu_server" parent="saas_portal.menu_saas" sequence="20"/>
+
+        <!-- Plan -->
+
+        <record id="view_plans_tree" model="ir.ui.view">
+            <field name="name">saas_portal.plans.tree</field>
+            <field name="model">saas_portal.plan</field>
+            <field name="priority">4</field>
+            <field name="arch" type="xml">
+                <tree string="Plans">
+                    <field name="sequence" invisible="1"/>
+                    <field name="name"/>
+                    <field name="template_id"/>
+                    <field name="state" />
+                    <button name="create_template" type="object" states="draft" icon="gtk-apply" />
+                    <button name="edit_template" type="object" states="confirmed" icon="gtk-edit" />
+                    <!--<button name="upgrade_template" type="object" states="confirmed" icon="gtk-execute" />-->
+                    <button name="delete_template" type="object" states="confirmed" icon="gtk-cancel" />
+                </tree>
+            </field>
+        </record>
+
+
+        <record id="view_plans_form" model="ir.ui.view">
+            <field name="name">saas_portal.plans.form</field>
+            <field name="model">saas_portal.plan</field>
+            <field name="arch" type="xml">
+                <form string="plans">
+                    <header>
+                        <button string="Create template DB" name="create_template" type="object" attrs="{'invisible':['|', '|', ('state','not in', ['draft']), ('server_id','=',False), ('template_id','=',False)]}" icon="gtk-apply" class="oe_highlight"/>
+                        <button string="Log in to template DB" name="edit_template" type="object" states="confirmed" icon="gtk-edit" class="oe_highlight"/>
+                        <!--<button string="Configure template DB" name="upgrade_template" type="object" states="confirmed" icon="gtk-execute" />-->
+                        <button string="Delete template DB" name="delete_template" type="object" states="confirmed" icon="gtk-cancel" />
+                        <button string="Sync server" type="object" name="action_sync_server" icon="gtk-refresh"/>
+                        <button string="Create Client" type="action" name="%(action_create_client)d" states="confirmed"/>
+                        <field name="state" widget="statusbar"/>
+                    </header>
+                    <sheet>
+                    	<div class="oe_left" style="width: 500px;">
+                            <field name="logo" widget="image" class="oe_avatar oe_left"/>
+                            <div class="oe_title" style="width: 390px;">
+                                <label class="oe_edit_only" for="name" string="Name"/>
+                                <h1><field name="name" class="oe_inline"/></h1>
+								<field name="summary"/>
+                            </div>
+                        </div>
+                        <group>
+                            <group string="Technical Settings">
+                                <field name="server_id"/>
+                                <field name="template_id"/>
+                            </group>
+                            <group string="Plan Settings">
+                                <field name="dbname_template"/>
+                                <field name="expiration"/>
+                            </group>
+                        </group>
+                        <separator string="Odoo DB Settings"/>
+                        <group col="4">
+                            <field name="demo"/>
+                            <field name="lang"/>
+                            <field name="tz"/>
+                        </group>
+                        <separator string="Website Settings"/>
+                        <group>
+                            <field name="website_description" col="4"/>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="action_plans" model="ir.actions.act_window">
+            <field name="name">Plans</field>
+            <field name="type">ir.actions.act_window</field>
+            <field name="res_model">saas_portal.plan</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">tree,form</field>
+        </record>
+
+        <menuitem action="action_plans" id="menu_plans" parent="saas_portal.menu_saas" sequence="30"/>
+
+        <!-- Config -->
+
+        <record id="action_database_form" model="ir.ui.view">
+            <field name="name">action.database.form</field>
+            <field name="model">saas.config</field>
+            <field name="arch" type="xml">
+                <form string="Configure Database" create="false" edit="false" delete="false">
+                     <group>
+                        <field name="id" invisible="1" />
+                        <field name="action" readonly="1"/>
+                        <field name="database_id" />
+                        <field name="server_id"/>
+                     </group>
+                     <notebook>
+                     <page string="Result"  attrs="{'invisible': [('id', '=', False)]}">
+                        <field name="description" />
+                     </page>
+
+                     <page string="Addons"  attrs="{'invisible': [('action', '!=', 'upgrade')]}">
+                         <p>Comma-separated list of addons to Update, Install or Uninstall</p>
+                         <group>
+                             <field name="update_addons"/>
+                             <field name="install_addons"/>
+                             <field name="uninstall_addons"/>
+                         </group>
+                     </page>
+                     <page string="Parameters" attrs="{'invisible': [('action', '!=', 'upgrade')]}">
+                         <field name="param_ids" colspan="4" >
+                             <tree editable="bottom">
+                                 <field name="key" />
+                                 <field name="value" />
+                             </tree>
+                         </field>
+                     </page>
+                     <page string="Commands" attrs="{'invisible': [('action', '!=', 'upgrade')]}">
+                         <p>This sections allows execute special commands on client. Ask developers for instructions.</p>
+                         <field name="fix_ids" colspan="4" >
+                             <tree editable="bottom">
+                                 <field name="model" />
+                                 <field name="method" />
+                             </tree>
+                         </field>
+                     </page>
+                     </notebook>
+                     <footer>
+                        <button name="execute_action" string="Execute" type="object" class="oe_highlight"/>
+                        or
+                        <button string="Close" class="oe_link" special="cancel"/>
+                    </footer>
+                </form>
+            </field>
+        </record>
+
+        <record id="action_upgrade_clients" model="ir.actions.act_window">
+            <field name="name">Upgrade Clients</field>
+            <field name="type">ir.actions.act_window</field>
+            <field name="res_model">saas.config</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">form</field>
+            <field name="target">new</field>
+            <field name="context">{'default_action': 'upgrade'}</field>
+        </record>
+
+        <!--<menuitem action="action_upgrade_clients" id="menu_upgrade_clients" parent="saas_portal.menu_saas" sequence="100"/>-->
+
+        <!-- Upgrade Databases -->
+
+        <record id="action_updb" model="ir.actions.act_window">
+            <field name="name">Configure Databases</field>
+            <field name="type">ir.actions.act_window</field>
+            <field name="res_model">saas.config</field>
+            <field name="view_type">form</field>
+            <field name="target">new</field>
+        </record>
+
+        <record id="action_binding_updb" model="ir.values">
+            <field name="name">Configure Databases</field>
+            <field name="key2">client_action_multi</field>
+            <field name="model">saas.config</field>
+            <field name="value_unpickle" eval="'ir.actions.act_window,'+str(action_updb)"/>
+        </record>
+        
+         <!-- Templates -->
+        <record id="view_databases_tree" model="ir.ui.view">
+            <field name="name">saas_portal.databases.tree</field>
+            <field name="model">saas_portal.database</field>
+            <field name="arch" type="xml">
+                <tree string="Plans">
+                     <field name="name" />
+                     <field name="state" />
+                     <field name="client_id" />
+                </tree>
+            </field>
+        </record>
+        
+        <record id="view_databases_filter" model="ir.ui.view">
+            <field name="name">saas_portal.database.select</field>
+            <field name="model">saas_portal.database</field>
+            <field name="arch" type="xml">
+                <search string="Search Databases">
+                    <field name="name" string="Database Name"/>
+                    <filter string="Templates" name="template" domain="[('state', '=','template')]"/>
+                </search>
+            </field>
+        </record>
+        
+        <record id="action_templates" model="ir.actions.act_window">
+            <field name="name">Templates</field>
+            <field name="type">ir.actions.act_window</field>
+            <field name="res_model">saas_portal.database</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">tree,form</field>
+            <field name="context">{'search_default_template': 1}</field>
+        </record>
+
+        <menuitem action="action_templates" id="menu_templates" parent="menu_saas" sequence="40" groups="base.group_no_one"/>
+
+    </data>
+</openerp>
