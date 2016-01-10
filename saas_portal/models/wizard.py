@@ -2,7 +2,7 @@
 import requests
 import werkzeug
 import datetime
-import simplejson
+import json as simplejson
 
 import openerp
 from openerp.addons.saas_utils import connector, database
